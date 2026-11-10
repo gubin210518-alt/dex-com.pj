@@ -1,0 +1,682 @@
+<!doctype html><html lang="ko"><meta charset="utf-8"><title>DeX 미니PC 제작 노트</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+:root{
+  --bg:#f3f5f4; --surface:#fff; --surface2:#f8faf9; --ink:#14191b; --muted:#59646b; --line:#dfe4e2;
+  --accent:#0f766e; --accent-ink:#fff; --accent-soft:#e3f2ef; --hot:#c2620a; --bad:#cf3a31; --stage:#eaf0ee;
+  --shadow:0 1px 2px rgba(16,24,22,.05),0 4px 16px rgba(16,24,22,.05);
+  --r:12px; --r-s:8px;
+  --font-body:'IBM Plex Sans KR',system-ui,-apple-system,'Apple SD Gothic Neo','Malgun Gothic',sans-serif;
+  --font-mono:'JetBrains Mono',ui-monospace,Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){:root{
+  --bg:#0e1213; --surface:#161c1d; --surface2:#1a2122; --ink:#e7eeec; --muted:#98a5a3; --line:#263031;
+  --accent:#5cd5c6; --accent-ink:#04201c; --accent-soft:#143532; --hot:#f2a65a; --bad:#ff6f65; --stage:#121819;
+  --shadow:0 1px 2px rgba(0,0,0,.4),0 6px 20px rgba(0,0,0,.25); color-scheme:dark}}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--font-body);font-size:15px;line-height:1.65;
+  padding:0 max(16px,env(safe-area-inset-right)) 56px max(16px,env(safe-area-inset-left));word-break:keep-all}
+.wrap{max-width:1100px;margin:0 auto;display:flex;flex-direction:column;gap:24px}
+h1{font-size:clamp(24px,4.2vw,34px);line-height:1.2;margin:0;font-weight:700}
+h2{font-size:18px;margin:0 0 12px;font-weight:600;display:flex;align-items:center;gap:10px}
+h2::before{content:"";width:4px;height:18px;border-radius:2px;background:var(--accent)}
+.sub{margin:8px 0 0;color:var(--muted)}
+a{color:var(--accent)}
+button{font:inherit;color:inherit}
+.hero{padding:32px 0 4px}
+.kicker{font-family:var(--font-mono);font-size:12px;letter-spacing:.08em;color:var(--accent);text-transform:uppercase;margin:0 0 8px}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin:16px 0 0;padding:0;list-style:none}
+.chips li{font-size:13px;padding:4px 10px;border-radius:999px;background:var(--surface);border:1px solid var(--line);color:var(--muted)}
+.chips li b{color:var(--ink);font-weight:600}
+.tabbar{position:sticky;top:0;z-index:20;padding:10px 0;background:color-mix(in srgb,var(--bg) 88%,transparent);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
+.tabs{display:flex;gap:4px;padding:4px;background:var(--surface);border:1px solid var(--line);border-radius:999px;width:max-content;max-width:100%;overflow-x:auto;scrollbar-width:none}
+.tab{border:0;background:transparent;padding:8px 18px;cursor:pointer;font-weight:500;color:var(--muted);border-radius:999px;white-space:nowrap;min-height:40px}
+.tab[aria-selected="true"]{color:var(--accent-ink);background:var(--accent)}
+.panel{display:flex;flex-direction:column;gap:16px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:20px;box-shadow:var(--shadow)}
+.tag{display:inline-block;font-size:12px;font-weight:600;padding:2px 8px;border-radius:999px;white-space:nowrap}
+.ok{background:var(--accent-soft);color:var(--accent)}
+.mid{background:color-mix(in srgb,var(--hot) 15%,transparent);color:var(--hot)}
+.no{background:color-mix(in srgb,var(--bad) 14%,transparent);color:var(--bad)}
+.unk{background:var(--surface2);color:var(--muted);border:1px solid var(--line)}
+.pick{background:var(--accent);color:var(--accent-ink)}
+/* 필터 */
+.filters{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px}
+.fbtn{border:1px solid var(--line);background:var(--surface2);padding:6px 14px;border-radius:999px;cursor:pointer;font-size:14px;color:var(--muted)}
+.fbtn[aria-pressed="true"]{background:var(--ink);color:var(--surface);border-color:var(--ink)}
+/* 기기 표 */
+.tbl{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th,td{text-align:left;padding:10px 8px;border-bottom:1px solid var(--line);vertical-align:middle}
+th{font-weight:600;color:var(--muted);font-size:13px;white-space:nowrap}
+.mono{font-family:var(--font-mono);font-size:13px}
+.dname{border:0;background:none;padding:0;cursor:pointer;font-weight:600;color:var(--ink);text-align:left;display:flex;align-items:center;gap:8px}
+.dname::after{content:"▸";color:var(--muted);font-size:12px;transition:transform .15s}
+tr.open .dname::after{transform:rotate(90deg)}
+.dname:hover{color:var(--accent)}
+tr.detail td{background:var(--surface2);padding:14px 16px}
+.dgrid{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(0,1fr);gap:16px}
+@media (max-width:720px){.dgrid{grid-template-columns:1fr}}
+.dgrid table{font-size:13px}
+.dgrid th,.dgrid td{padding:6px 6px}
+.conn{display:flex;flex-wrap:wrap;gap:6px}
+.memo{color:var(--muted);font-size:13px;margin:10px 0 0}
+.note{font-size:13px;color:var(--muted);margin:12px 0 0}
+/* 3D */
+.stage{position:relative;height:min(68vh,560px);border-radius:var(--r);overflow:hidden;background:var(--stage);border:1px solid var(--line)}
+.stage canvas{display:block;width:100%;height:100%;touch-action:none}
+.ctrls{position:absolute;top:12px;left:12px;display:flex;gap:6px;flex-wrap:wrap}
+.cbtn{border:1px solid var(--line);background:var(--surface);padding:6px 12px;border-radius:999px;cursor:pointer;font-size:13px;box-shadow:var(--shadow)}
+.cbtn[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.info{position:absolute;right:12px;bottom:12px;max-width:280px;background:var(--surface);border:1px solid var(--line);border-radius:var(--r-s);padding:12px 14px;box-shadow:var(--shadow);font-size:13px}
+.info b{display:block;font-size:15px;margin-bottom:2px}
+.info span{color:var(--muted)}
+.hint{position:absolute;left:12px;bottom:12px;font-size:12px;color:var(--muted)}
+.parts{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px}
+.part{display:flex;gap:10px;align-items:flex-start;border:1px solid var(--line);border-radius:var(--r-s);padding:10px 12px;background:var(--surface2);cursor:pointer;text-align:left}
+.part:hover,.part.on{border-color:var(--accent)}
+.sw{width:12px;height:12px;border-radius:3px;margin-top:5px;flex:none}
+.part b{display:block;font-size:14px}
+.part span{font-size:12px;color:var(--muted)}
+.links li{margin-bottom:8px}
+.links small{color:var(--muted)}
+ul{margin:0;padding-left:20px}
+.wd{overflow-x:auto}
+.wd svg{display:block;width:100%;min-width:720px;height:auto}
+.zone{fill:none;stroke:var(--line);stroke-width:1.5;stroke-dasharray:6 5}
+.zt{font-size:12px;fill:var(--muted);font-family:var(--font-mono)}
+.nd rect{fill:var(--surface2);stroke:var(--line);stroke-width:1.5}
+.nd.hl rect{stroke:var(--accent)}
+.nd.main rect{fill:var(--accent-soft);stroke:var(--accent)}
+.nd.out rect{fill:var(--surface);stroke-dasharray:4 3}
+.nt{font-size:13px;font-weight:600;fill:var(--ink);text-anchor:middle}
+.ns{font-size:11px;fill:var(--muted);text-anchor:middle;font-family:var(--font-mono)}
+.w12{stroke:var(--bad);stroke-width:3;fill:none}
+.wg{stroke:var(--ink);stroke-width:3;fill:none}
+.wd2{stroke:var(--accent);stroke-width:3;fill:none}
+.ahead{fill:var(--accent)}
+.dot{fill:var(--ink)} .dotr{fill:var(--bad)}
+.wl{font-size:11px;fill:var(--accent);font-family:var(--font-mono)}
+.lg text{font-size:12px;fill:var(--muted)}
+.warn{border-left:4px solid var(--bad)}
+
+</style>
+<body><div class="wrap">
+
+<header class="hero">
+  <p class="kicker">Samsung DeX · Mini PC</p>
+  <h1>DeX 미니PC 제작 노트</h1>
+  <p class="sub">화면이 고장 난 중고 갤럭시를 케이스에 넣어 미니PC로 쓴다.</p>
+  <ul class="chips">
+    <li>예산 <b>8만 원 이하</b></li>
+    <li>사용 기기 <b>S20 FE (3만 원)</b></li>
+    <li>용도 <b>코딩 · 스트리밍 게임</b></li>
+  </ul>
+</header>
+
+<div class="tabbar"><div class="tabs" role="tablist">
+  <button class="tab" role="tab" aria-selected="true" data-t="p1">기기 비교</button>
+  <button class="tab" role="tab" aria-selected="false" data-t="p2">구성</button>
+  <button class="tab" role="tab" aria-selected="false" data-t="p4">배선</button>
+  <button class="tab" role="tab" aria-selected="false" data-t="p3">참고</button>
+</div></div>
+
+<!-- 기기 비교 -->
+<section id="p1" class="panel">
+  <div class="card">
+    <h2>DeX 지원 기기</h2>
+    <div class="filters" id="filters">
+      <button class="fbtn" aria-pressed="true" data-f="all">전체</button>
+      <button class="fbtn" aria-pressed="false" data-f="sd">스냅드래곤만</button>
+      <button class="fbtn" aria-pressed="false" data-f="S">갤럭시 S</button>
+      <button class="fbtn" aria-pressed="false" data-f="Note">노트</button>
+      <button class="fbtn" aria-pressed="false" data-f="Fold">폴더블</button>
+      <button class="fbtn" aria-pressed="false" data-f="A">A</button>
+      <button class="fbtn" aria-pressed="false" data-f="Tab">태블릿</button>
+    </div>
+    <div class="tbl"><table>
+      <thead><tr><th>기기</th><th>출시</th><th>칩 (한국판)</th><th>램</th><th>칩 구분</th></tr></thead>
+      <tbody id="dev"></tbody>
+    </table></div>
+    <p class="note">지원 목록: 삼성 미국 고객지원 DeX 호환 목록. 칩·램은 기억 기준이라 <span class="tag unk">확인 필요</span> 표시와 함께 구매 전 모델명으로 다시 확인. 제외: Z 플립7 FE 이하 플립, 탭 S9 FE · S10 FE(유선 출력·무선 DeX 미지원), A 시리즈(A90 5G 제외).</p>
+  </div>
+</section>
+
+<!-- 구성 -->
+<section id="p2" class="panel" hidden>
+  <div class="stage" id="stage">
+    <div class="ctrls">
+      <button class="cbtn" id="bLid" aria-pressed="true">뚜껑</button>
+      <button class="cbtn" id="bExp" aria-pressed="false">분해</button>
+      <button class="cbtn" id="bSpin" aria-pressed="false">회전</button>
+      <button class="cbtn" id="bReset">시점 초기화</button>
+    </div>
+    <div class="info" id="info"><b>S20 FE 미니PC</b><span>부품을 누르면 설명이 나와요</span></div>
+    <div class="hint">드래그 회전 · 휠/핀치 확대</div>
+  </div>
+  <div class="card">
+    <h2>부품</h2>
+    <div class="parts" id="parts"></div>
+    <p class="note">임의 구성안. 케이스 약 160 × 110 × 55mm, 투명 뚜껑은 네오디뮴 자석으로 체결. 보드 · 배터리 치수를 실측한 뒤 케이스 크기를 확정한다.</p>
+  </div>
+</section>
+
+
+<!-- 배선 -->
+<section id="p4" class="panel" hidden>
+  <div class="card">
+    <h2>배선도</h2>
+    <div class="wd"><svg viewBox="0 0 1040 400" role="img" aria-label="배선도">
+      <defs>
+        <marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="ahead"/></marker>
+      </defs>
+      <rect x="150" y="22" width="755" height="360" rx="14" class="zone"/>
+      <line x1="938" y1="30" x2="938" y2="250" stroke="var(--accent)" stroke-width="5" stroke-dasharray="2 6"/>
+      <text x="905" y="265" class="wl">뒷면 패널</text>
+      <text x="164" y="44" class="zt">케이스 안</text>
+
+      <!-- +12V (빨강) -->
+      <path d="M130 80 H170 M270 80 H310 M400 80 H440 M530 80 H580" class="w12"/>
+      <!-- 팬 + -->
+      <path d="M555 80 V275 H530" class="w12"/>
+      <!-- GND (검정) -->
+      <path d="M130 96 H150 V135 H640 V105" class="wg"/>
+      <path d="M220 105 V135" class="wg"/>
+      <path d="M470 135 V250" class="wg"/>
+      <circle cx="220" cy="135" r="3.5" class="dot"/><circle cx="470" cy="135" r="3.5" class="dot"/><circle cx="555" cy="80" r="3.5" class="dotr"/>
+      <!-- USB-C / HDMI -->
+      <path d="M700 80 H760" class="wd2" marker-end="url(#ar)"/>
+      <text x="730" y="72" class="wl" text-anchor="middle">PD</text>
+      <path d="M825 105 V250" class="wd2" marker-end="url(#ar)"/>
+      <text x="833" y="185" class="wl">USB-C</text>
+      <path d="M890 70 H935 V57 H945" class="wd2" marker-end="url(#ar)"/>
+      <text x="898" y="62" class="wl">HDMI</text>
+      <path d="M890 88 H925 V145 H945" class="wd2" marker-end="url(#ar)"/>
+      <text x="882" y="168" class="wl">USB-A</text>
+      <path d="M890 100 H915 V215 H945" class="wd2" marker-end="url(#ar)"/>
+      <text x="878" y="232" class="wl">USB-C</text>
+
+      <g class="nd"><rect x="20" y="55" width="110" height="50" rx="8"/><text x="75" y="77" class="nt">① 어댑터</text><text x="75" y="95" class="ns">12V 5A</text></g>
+      <g class="nd"><rect x="170" y="55" width="100" height="50" rx="8"/><text x="220" y="77" class="nt">② DC 잭</text><text x="220" y="95" class="ns">54-00311</text></g>
+      <g class="nd"><rect x="310" y="55" width="90" height="50" rx="8"/><text x="355" y="77" class="nt">③ 퓨즈</text><text x="355" y="95" class="ns">5A</text></g>
+      <g class="nd"><rect x="440" y="55" width="90" height="50" rx="8"/><text x="485" y="77" class="nt">④ 전원 버튼</text><text x="485" y="95" class="ns">16mm 래칭</text></g>
+      <g class="nd hl"><rect x="580" y="55" width="120" height="50" rx="8"/><text x="640" y="77" class="nt">⑤ PD 모듈</text><text x="640" y="95" class="ns">XPM52C 65W</text></g>
+      <g class="nd hl"><rect x="760" y="45" width="130" height="60" rx="8"/><text x="825" y="70" class="nt">⑥ USB-C 허브</text><text x="825" y="88" class="ns">DCH-H301</text></g>
+      <g class="nd"><rect x="440" y="250" width="90" height="50" rx="8"/><text x="485" y="272" class="nt">⑦ 팬</text><text x="485" y="290" class="ns">12V 40mm</text></g>
+      <g class="nd main"><rect x="760" y="250" width="130" height="50" rx="8"/><text x="825" y="272" class="nt">S20 FE</text><text x="825" y="290" class="ns">DeX</text></g>
+      <g class="nd out"><rect x="945" y="35" width="85" height="44" rx="8"/><text x="987" y="62" class="nt">모니터</text></g>
+      <g class="nd out"><rect x="945" y="123" width="85" height="44" rx="8"/><text x="987" y="143" class="nt">키보드</text><text x="987" y="159" class="ns">마우스</text></g>
+      <g class="nd out"><rect x="945" y="193" width="85" height="44" rx="8"/><text x="987" y="213" class="nt">USB-C</text><text x="987" y="229" class="ns">SSD 등</text></g>
+
+      <g transform="translate(20,365)" class="lg">
+        <line x1="0" y1="0" x2="26" y2="0" class="w12"/><text x="34" y="4">+12V</text>
+        <line x1="90" y1="0" x2="116" y2="0" class="wg"/><text x="124" y="4">GND</text>
+      </g>
+    </svg></div>
+  </div>
+
+  <div class="card">
+    <h2>케이스 제작용 부품 링크</h2>
+    <p class="sub" style="margin:0 0 12px">원본: <a href="https://docs.google.com/spreadsheets/d/1hqwxBRlsfU9axh04-jWtKk5U5ekB2XwM5365ZiVRzSk/edit?usp=sharing" target="_blank" rel="noopener noreferrer">부품 리스트 (구글 시트)</a></p>
+    <div class="tbl"><table>
+      <thead><tr><th>품목</th><th>링크</th><th>비고</th></tr></thead>
+      <tbody>
+        <tr><td>네오디뮴 자석</td><td><a href="https://www.coupang.com/vp/products/196874999?itemId=567243279&amp;vendorItemId=4489030396" target="_blank" rel="noopener noreferrer">쿠팡</a></td><td>8×3mm</td></tr>
+        <tr><td>멀티허브 (디지털케미 DCH-H301)</td><td><a href="https://www.coupang.com/vp/products/8156303727?itemId=23238152174&amp;vendorItemId=90270602477" target="_blank" rel="noopener noreferrer">쿠팡</a></td><td>분해해서 기판만 사용. 기판 포트 구멍 크기에 맞춰 케이스에 구멍 뚫기</td></tr>
+        <tr><td>팬 (DC 12V 40×40×10)</td><td><a href="https://www.coupang.com/vp/products/9558262845?itemId=28522108243&amp;vendorItemId=95469470951" target="_blank" rel="noopener noreferrer">쿠팡</a></td><td>40×40×10mm. 양면에 2개 달지 1개 달지는 디자인하면서 판단</td></tr>
+      </tbody>
+    </table></div>
+  </div>
+
+  <div class="card">
+    <h2>부품 리스트</h2>
+    <div class="tbl"><table>
+      <thead><tr><th>#</th><th>부품</th><th>부품명 · 모델</th><th>규격</th><th>수량</th></tr></thead>
+      <tbody>
+        <tr><td class="mono">①</td><td>DC 어댑터</td><td>KC 인증 12V 5A SMPS 어댑터 <span class="tag unk">브랜드 자유</span></td><td>12V 5A(60W), 5.5×2.1mm 센터 +</td><td class="mono">1</td></tr>
+        <tr><td class="mono">②</td><td>패널형 DC 잭</td><td><b>Tensility 54-00311</b></td><td>5.5×2.1mm, 9A 48V, 너트 고정</td><td class="mono">1</td></tr>
+        <tr><td class="mono">③</td><td>퓨즈</td><td>인라인 미니 블레이드 퓨즈 홀더 + <b>5A 미니 블레이드 퓨즈</b></td><td>18AWG 이상 홀더</td><td class="mono">1</td></tr>
+        <tr><td class="mono">④</td><td>전원 버튼</td><td><b>16mm 메탈 래칭 푸시버튼</b> (누르면 켜짐 고정, 다시 누르면 꺼짐, 링 LED) <span class="tag unk">전류 정격 확인 필요</span></td><td>패널 구멍 Ø16mm, <b>DC 12V 5A 이상</b> 정격, 1NO, LED 12V</td><td class="mono">1</td></tr>
+        <tr><td class="mono">⑤</td><td>PD 충전 모듈</td><td><b>PD 65W Fast Charging Module Type-C</b> (XPM52C 칩)</td><td>입력 8~30V, USB-C PD/PPS</td><td class="mono">1</td></tr>
+        <tr><td class="mono">⑥</td><td>USB-C 허브</td><td><b>디지털케미 5포트 USB-C 허브 (DCH-H301)</b> <span class="tag unk">분해해서 기판만 사용 · 기판 실측 필요</span></td><td>HDMI, USB-A 3.0 ×3, USB-C PD 충전 입력</td><td class="mono">1</td></tr>
+        <tr><td class="mono">⑦</td><td>쿨링 팬</td><td><b>DC 12V 쿨링팬 DA04010B12M</b></td><td>40×40×10mm, 12V 0.08A, 2핀</td><td class="mono">1~2</td></tr>
+        <tr><td class="mono">⑧</td><td>뒷면 포트</td><td>허브 기판 포트를 뒷판 구멍으로 바로 노출 (연장선 없음) <span class="tag unk">HDMI 방향은 기판 실측 후 결정</span></td><td>HDMI ×1, USB-A ×3</td><td class="mono">-</td></tr>
+        <tr><td class="mono">⑨</td><td>자석</td><td>네오디뮴 원형 자석 <span class="tag unk">브랜드 자유</span></td><td>Ø8×3mm, N35 이상 (모서리 4쌍)</td><td class="mono">8</td></tr>
+        <tr><td class="mono">-</td><td>USB-C 케이블</td><td>C to C 3A(60W) 짧은 케이블 <span class="tag unk">브랜드 자유</span></td><td>⑤→⑥, ⑥→폰 각 10~20cm</td><td class="mono">2</td></tr>
+        <tr><td class="mono">-</td><td>전선</td><td>UL1007 또는 실리콘 전선</td><td>20AWG 빨강 · 검정</td><td class="mono">1m씩</td></tr>
+        <tr><td class="mono">-</td><td>단자</td><td>버튼 단자 연결 (납땜 + 수축튜브, 또는 전용 소켓 케이블)</td><td>버튼 접점 2개(NO, C) + LED 2개(+, -)</td><td class="mono">4</td></tr>
+        <tr><td class="mono">-</td><td>수축튜브</td><td>-</td><td>3mm, 5mm</td><td class="mono">약간</td></tr>
+        <tr><td class="mono">-</td><td>케이스</td><td>친구 제작 (본체 PETG, 뚜껑 투명 아크릴 3mm)</td><td>약 160×110×55mm, 보드 실측 후 확정</td><td class="mono">1</td></tr>
+        <tr><td class="mono">-</td><td>접착제</td><td>2액형 에폭시</td><td>자석 고정</td><td class="mono">약간</td></tr>
+        <tr><td class="mono">-</td><td>나사</td><td>M3 볼트 · 너트</td><td>팬 · 보드 고정</td><td class="mono">약간</td></tr>
+      </tbody>
+    </table></div>
+    <h3 style="margin:18px 0 8px">팬 배선</h3>
+    <p class="sub" style="margin:0">DA04010B12M 2핀: 빨강 +12V, 검정 GND (전원 버튼 뒤 12V 라인)</p>
+    <h3 style="margin:18px 0 8px">왜 이 부품인가</h3>
+    <ul>
+      <li>DC-022 잭은 판매처마다 정격이 0.5~3A로 달라서, 정격이 확실한 54-00311(9A)로 고름</li>
+      <li>전체 소비 약 30W(폰 25W + 허브 + 팬) → 12V 3A는 한계라 5A 어댑터와 5A 퓨즈</li>
+      <li>PD 모듈은 12V 입력이면 20V 출력은 안 되지만, S20 FE 최대 25W(9V)라 충분 → 승압 모듈 필요 없음</li>
+      <li>허브는 가격 때문에 Belkin AVC022 대신 DCH-H301로 바꿈. 이 허브의 USB-C는 PD 충전 입력이라 뒷면 USB-C 데이터 포트는 없음</li>
+      <li>모든 포트가 폰 USB-C 하나를 나눠 쓰므로 PC처럼 포트별 속도가 따로 나오진 않음</li>
+    </ul>
+    <p class="note">가격은 확인하지 않았어요. 어댑터 · 케이블 · 전선은 특정 모델을 고르지 않았으니 규격만 맞추면 됩니다.</p>
+  </div>
+
+  <div class="card warn">
+    <h2>주의</h2>
+    <ul>
+      <li>배터리가 부풀었으면 이 구성으로 계속 충전하지 않는다</li>
+      <li>12V는 절대 폰이나 허브에 직접 연결하지 않는다 (반드시 PD 모듈 거침)</li>
+      <li>PD 모듈은 판매처 설명처럼 어댑터를 먼저 켠 뒤 연결</li>
+      <li>처음 켤 땐 멀티미터로 극성, PD 모듈 출력 확인 후 폰 연결</li>
+      <li>자석은 보드에서 멀리(모서리) 둔다. 갤럭시는 커버 감지 센서가 자석에 반응해 화면을 끌 수 있어서, 조립 전에 자석을 보드 근처에 대 보고 DeX가 꺼지지 않는지 시험</li>
+      <li>패널 연장선은 싼 제품일수록 HDMI가 끊길 수 있음. 짧은 것 사용</li>
+    </ul>
+  </div>
+  <div class="card">
+    <h2>간단 버전</h2>
+    <p class="sub" style="margin:0">①~⑤ 대신 USB-C PD 충전기를 허브 PD 입력에 바로 꽂아도 된다. 납땜 없음.</p>
+  </div>
+</section>
+
+<!-- 참고 -->
+<section id="p3" class="panel" hidden>
+  <div class="card"><h2>비슷한 프로젝트</h2>
+    <ul class="links">
+      <li>unwanted_tech1 — S9로 만든 PC<br><small>인스타그램 · 케이스 + 스위치 + 강압 컨버터 + USB 허브</small></li>
+      <li><a href="https://www.geeky-gadgets.com/broken-phone-desktop-build/">화면 고장 S20 FE로 만든 DeX 미니PC</a><br><small>ETA Prime · SD 865 · 100달러 미만</small></li>
+      <li><a href="https://www.notebookcheck.net/DIY-engineer-makes-a-mini-PC-from-a-scrap-smartphone.1412654.0.html">고장 폰 보드를 케이스에 넣은 미니PC</a><br><small>GameRig · 쿨러 + USB 허브 + 전원 버튼</small></li>
+      <li><a href="https://github.com/pdone/linux-android">linux-android</a><br><small>Termux로 리눅스 데스크톱, 루팅 없음</small></li>
+      <li><a href="https://makerworld.com/es/models/3103245-lapdock">DIY DeX 랩독</a><br><small>MakerWorld · 기성 부품 조합</small></li>
+      <li><a href="https://www.samsung.com/us/support/answer/ANS00062657/">삼성 DeX 호환 기기 목록</a><br><small>Samsung US 고객지원</small></li>
+    </ul>
+  </div>
+</section>
+
+</div>
+
+<script>
+/* ---------- 탭 ---------- */
+let threeStarted=false;
+document.querySelectorAll('.tab').forEach(b=>b.addEventListener('click',()=>{
+  document.querySelectorAll('.tab').forEach(x=>x.setAttribute('aria-selected',x===b));
+  document.querySelectorAll('section.panel').forEach(s=>s.hidden=s.id!==b.dataset.t);
+  if(b.dataset.t==='p2'){ if(!threeStarted){threeStarted=true; window.startThree&&window.startThree();} else window.resizeThree&&window.resizeThree(); }
+}));
+
+/* ---------- 기기 데이터 ----------
+ c: sd=스냅드래곤, ex=엑시노스, mix=혼용, mt=미디어텍, unk=확인 필요
+ conn: w=유선, wl=무선, pad=DeX 패드/스테이션 */
+const U='확인 필요';
+const DEV=[
+ {f:'S',n:'갤럭시 S8 시리즈',y:2017,chip:'엑시노스 8895',ram:'4~6GB',c:'ex',conn:['w','pad'],
+  m:[['S8','엑시노스 8895','4GB'],['S8+','엑시노스 8895','4/6GB']],memo:'무선 DeX 미지원. HDMI 연결은 DeX 패드나 스테이션 필요.'},
+ {f:'S',n:'갤럭시 S9 시리즈',y:2018,chip:'엑시노스 9810',ram:'4~6GB',c:'ex',conn:['w','wl','pad'],
+  m:[['S9','엑시노스 9810','4GB'],['S9+','엑시노스 9810','6GB']],memo:'참고 영상(unwanted_tech1)에 쓰인 모델.'},
+ {f:'S',n:'갤럭시 S10 시리즈',y:2019,chip:'엑시노스 9820',ram:'6~12GB',c:'ex',conn:['w','wl','pad'],
+  m:[['S10e','엑시노스 9820','6GB'],['S10','엑시노스 9820','8GB'],['S10+','엑시노스 9820','8/12GB'],['S10 5G','엑시노스 9820','8GB']]},
+ {f:'S',n:'갤럭시 S20 시리즈',y:2020,chip:'스냅드래곤 865',ram:'6~16GB',c:'sd',conn:['w','wl','pad'],pick:'사용 중',
+  m:[['S20','SD 865','12GB'],['S20+','SD 865','12GB'],['S20 Ultra','SD 865','12/16GB'],['S20 FE','SD 865','6/8GB']],memo:'S20 FE는 ETA Prime 미니PC 프로젝트에 쓰인 모델. 이 프로젝트에 쓰는 폰: 당근 부품용 3만 원, 화면 고장, 모니터 DeX 출력 확인. 4G(엑시노스 990)/5G(SD 865) 중 어느 쪽인지 확인 필요.'},
+ {f:'S',n:'갤럭시 S21 시리즈',y:2021,chip:'엑시노스 2100',ram:'8~16GB',c:'ex',conn:['w','wl','pad'],
+  m:[['S21','엑시노스 2100','8GB'],['S21+','엑시노스 2100','8GB'],['S21 Ultra','엑시노스 2100','12/16GB'],['S21 FE',U,'6/8GB']]},
+ {f:'S',n:'갤럭시 S22 시리즈',y:2022,chip:'엑시노스 2200 / SD 8 Gen 1',ram:'8~12GB',c:'mix',conn:['w','wl','pad'],
+  m:[['S22',U,'8GB'],['S22+',U,'8GB'],['S22 Ultra',U,'12GB']],memo:'한국판 칩이 모델·시기마다 달랐다는 기억이 있어 확인 필요.'},
+ {f:'S',n:'갤럭시 S23 시리즈',y:2023,chip:'SD 8 Gen 2 for Galaxy',ram:'8~12GB',c:'sd',conn:['w','wl','pad'],
+  m:[['S23','SD 8 Gen 2','8GB'],['S23+','SD 8 Gen 2','8GB'],['S23 Ultra','SD 8 Gen 2','12GB'],['S23 FE',U,'8GB']]},
+ {f:'S',n:'갤럭시 S24 시리즈',y:2024,chip:'엑시노스 2400 / SD 8 Gen 3',ram:'8~12GB',c:'mix',conn:['w','wl','pad'],
+  m:[['S24','엑시노스 2400','8GB'],['S24+','엑시노스 2400','12GB'],['S24 Ultra','SD 8 Gen 3','12GB'],['S24 FE','엑시노스 2400e','8GB']]},
+ {f:'S',n:'갤럭시 S25 시리즈',y:2025,chip:'SD 8 Elite for Galaxy',ram:'12~16GB',c:'sd',conn:['w','wl','pad'],
+  m:[['S25','SD 8 Elite','12GB'],['S25+','SD 8 Elite','12GB'],['S25 Ultra','SD 8 Elite','12/16GB'],['S25 Edge','SD 8 Elite','12GB'],['S25 FE',U,'8GB']],memo:'One UI 7 이상이라 PC용 DeX는 미지원.'},
+ {f:'S',n:'갤럭시 S26 시리즈',y:2026,chip:'엑시노스 2600 / 스냅드래곤',ram:U,c:'unk',conn:['w','wl','pad'],
+  m:[['S26','엑시노스 2600 (보도)',U],['S26+',U,U],['S26 Ultra','스냅드래곤 (보도)',U]],memo:'보도마다 칩 구성이 달라 확인 필요.'},
+ {f:'Note',n:'갤럭시 노트8',y:2017,chip:'엑시노스 8895',ram:'6GB',c:'ex',conn:['w','pad'],
+  m:[['Note8','엑시노스 8895','6GB']],memo:'무선 DeX 미지원.'},
+ {f:'Note',n:'갤럭시 노트9',y:2018,chip:'엑시노스 9810',ram:'6~8GB',c:'ex',conn:['w','wl','pad'],
+  m:[['Note9','엑시노스 9810','6/8GB']]},
+ {f:'Note',n:'갤럭시 노트10 시리즈',y:2019,chip:'엑시노스 9825',ram:'8~12GB',c:'ex',conn:['w','wl','pad'],
+  m:[['Note10','엑시노스 9825','8GB'],['Note10+','엑시노스 9825','12GB']]},
+ {f:'Note',n:'갤럭시 노트20 시리즈',y:2020,chip:'스냅드래곤 865+',ram:'8~12GB',c:'sd',conn:['w','wl','pad'],
+  m:[['Note20','SD 865+','8GB'],['Note20 Ultra','SD 865+','12GB']]},
+ {f:'Fold',n:'갤럭시 폴드',y:2019,chip:'스냅드래곤 855',ram:'12GB',c:'sd',conn:['w','wl'],m:[['Fold','SD 855','12GB']]},
+ {f:'Fold',n:'갤럭시 Z 폴드2',y:2020,chip:'스냅드래곤 865+',ram:'12GB',c:'sd',conn:['w','wl'],m:[['Z Fold2','SD 865+','12GB']]},
+ {f:'Fold',n:'갤럭시 Z 폴드3',y:2021,chip:'스냅드래곤 888',ram:'12GB',c:'sd',conn:['w','wl'],m:[['Z Fold3','SD 888','12GB']]},
+ {f:'Fold',n:'갤럭시 Z 폴드4',y:2022,chip:'스냅드래곤 8+ Gen 1',ram:'12GB',c:'sd',conn:['w','wl'],pick:'',
+  m:[['Z Fold4','SD 8+ Gen 1','12GB']],memo:'내부 7.6인치, 커버 6.2인치, 배터리 4,400mAh, 무게 약 263g. 보던 매물은 메인보드 고장으로 제외.'},
+ {f:'Fold',n:'갤럭시 Z 폴드5',y:2023,chip:'SD 8 Gen 2 for Galaxy',ram:'12GB',c:'sd',conn:['w','wl'],m:[['Z Fold5','SD 8 Gen 2','12GB']]},
+ {f:'Fold',n:'갤럭시 Z 폴드6',y:2024,chip:'SD 8 Gen 3 for Galaxy',ram:'12GB',c:'sd',conn:['w','wl'],m:[['Z Fold6','SD 8 Gen 3','12GB']]},
+ {f:'Fold',n:'갤럭시 Z 폴드7',y:2025,chip:'SD 8 Elite for Galaxy',ram:'12~16GB',c:'sd',conn:['w','wl'],m:[['Z Fold7','SD 8 Elite','12/16GB']]},
+ {f:'Fold',n:'갤럭시 Z 플립7',y:2025,chip:'엑시노스 2500',ram:'12GB',c:'ex',conn:['w','wl'],m:[['Z Flip7','엑시노스 2500','12GB']],memo:'플립 중 처음으로 DeX 지원. 플립7 FE와 이전 플립은 미지원.'},
+ {f:'Fold',n:'Z 트라이폴드 · 폴드8 · 플립8',y:'2025~',chip:U,ram:U,c:'unk',conn:['w','wl'],
+  m:[['Z TriFold',U,U],['Z Fold8',U,U],['Z Fold8 Ultra',U,U],['Z Flip8',U,U]],memo:'삼성 목록에는 있지만 스펙은 확인 못 함.'},
+ {f:'A',n:'갤럭시 A90 5G',y:2019,chip:'스냅드래곤 855',ram:'6~8GB',c:'sd',conn:['w','wl'],m:[['A90 5G','SD 855','6/8GB']],memo:'A 시리즈 중 유일한 DeX 지원.'},
+ {f:'Tab',n:'갤럭시 탭 S4',y:2018,chip:'스냅드래곤 835',ram:'4GB',c:'sd',conn:['w'],m:[['Tab S4','SD 835','4GB']],memo:'무선 DeX 미지원.'},
+ {f:'Tab',n:'갤럭시 탭 S5e',y:2019,chip:'스냅드래곤 670',ram:'4~6GB',c:'sd',conn:['w','wl'],m:[['Tab S5e','SD 670','4/6GB']]},
+ {f:'Tab',n:'갤럭시 탭 S6',y:2019,chip:'스냅드래곤 855',ram:'6~8GB',c:'sd',conn:['w','wl'],m:[['Tab S6','SD 855','6/8GB']]},
+ {f:'Tab',n:'갤럭시 탭 S7 시리즈',y:2020,chip:'스냅드래곤 865+',ram:'6~8GB',c:'sd',conn:['w','wl'],m:[['Tab S7','SD 865+','6/8GB'],['Tab S7+','SD 865+','6/8GB']]},
+ {f:'Tab',n:'갤럭시 탭 S8 시리즈',y:2022,chip:'SD 8 Gen 1',ram:'8~16GB',c:'sd',conn:['w','wl'],m:[['Tab S8','SD 8 Gen 1','8GB'],['Tab S8+','SD 8 Gen 1','8GB'],['Tab S8 Ultra','SD 8 Gen 1','12/16GB']]},
+ {f:'Tab',n:'갤럭시 탭 S9 시리즈',y:2023,chip:'SD 8 Gen 2 for Galaxy',ram:'8~16GB',c:'sd',conn:['w','wl'],m:[['Tab S9','SD 8 Gen 2','8/12GB'],['Tab S9+','SD 8 Gen 2','12GB'],['Tab S9 Ultra','SD 8 Gen 2','12/16GB']],memo:'S9 FE는 유선 출력·무선 DeX 미지원.'},
+ {f:'Tab',n:'갤럭시 탭 S10 시리즈',y:2024,chip:'디멘시티 9300+',ram:'12~16GB',c:'mt',conn:['w','wl'],m:[['Tab S10+','디멘시티 9300+','12GB'],['Tab S10 Ultra','디멘시티 9300+','12/16GB']],memo:'S10 FE는 유선 출력·무선 DeX 미지원.'},
+ {f:'Tab',n:'탭 S11 · S12 · A11+',y:'2025~',chip:U,ram:U,c:'unk',conn:['w','wl'],m:[['Tab S11 시리즈',U,U],['Tab S12 시리즈',U,U],['Tab A11+',U,U]]},
+ {f:'Tab',n:'탭 액티브 Pro · 액티브3',y:'2019~20',chip:'SD 670 / 엑시노스 9810',ram:'4GB',c:'mix',conn:['w'],m:[['Tab Active Pro','SD 670','4GB'],['Tab Active3','엑시노스 9810','4GB']],memo:'Tab Active Pro는 무선 DeX 목록에 없음.'},
+];
+const CT={sd:['스냅드래곤','ok'],ex:['엑시노스','mid'],mix:['혼용','mid'],mt:['미디어텍','mid'],unk:['확인 필요','unk']};
+const CN={w:'유선 HDMI',wl:'무선',pad:'패드/스테이션'};
+const esc=s=>String(s).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+const cell=v=>v===U?`<span class="tag unk">${U}</span>`:esc(v);
+function renderDev(flt){
+  const tb=document.getElementById('dev');
+  const list=DEV.filter(d=>flt==='all'||(flt==='sd'?d.c==='sd':d.f===flt));
+  tb.innerHTML=list.map((d,i)=>{
+    const [cl,cc]=CT[d.c];
+    return `<tr data-i="${DEV.indexOf(d)}"><td><button class="dname">${esc(d.n)}</button>${d.pick?` <span class="tag pick">${d.pick}</span>`:''}</td>
+      <td class="mono">${d.y}</td><td>${cell(d.chip)}</td><td class="mono">${cell(d.ram)}</td><td><span class="tag ${cc}">${cl}</span></td></tr>`;
+  }).join('');
+}
+document.getElementById('dev').addEventListener('click',e=>{
+  const btn=e.target.closest('.dname'); if(!btn) return;
+  const tr=btn.closest('tr'); const nx=tr.nextElementSibling;
+  if(nx&&nx.classList.contains('detail')){nx.remove();tr.classList.remove('open');return;}
+  const d=DEV[+tr.dataset.i];
+  const det=document.createElement('tr'); det.className='detail';
+  det.innerHTML=`<td colspan="5"><div class="dgrid">
+    <table><tr><th>모델</th><th>칩 (한국판)</th><th>램</th></tr>
+    ${d.m.map(r=>`<tr><td>${esc(r[0])}</td><td>${cell(r[1])}</td><td class="mono">${cell(r[2])}</td></tr>`).join('')}</table>
+    <div><div style="font-size:13px;color:var(--muted);margin-bottom:6px">연결 방식</div>
+      <div class="conn">${['w','wl','pad'].map(k=>`<span class="tag ${d.conn.includes(k)?'ok':'unk'}">${CN[k]} ${d.conn.includes(k)?'O':'X'}</span>`).join('')}</div>
+      ${d.memo?`<p class="memo">${esc(d.memo)}</p>`:''}</div></div></td>`;
+  tr.after(det); tr.classList.add('open');
+});
+document.getElementById('filters').addEventListener('click',e=>{
+  const b=e.target.closest('.fbtn'); if(!b) return;
+  document.querySelectorAll('.fbtn').forEach(x=>x.setAttribute('aria-pressed',x===b));
+  renderDev(b.dataset.f);
+});
+renderDev('all');
+</script>
+
+<script type="importmap">
+{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+"three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"}}
+</script>
+<script type="module">
+import * as THREE from 'three';
+import {OrbitControls} from 'three/addons/controls/OrbitControls.js';
+import {RoundedBoxGeometry} from 'three/addons/geometries/RoundedBoxGeometry.js';
+
+const PARTS={
+  case:{n:'케이스',d:'친구 제작. 본체 PETG, 약 160×110×55mm. 왼쪽 팬 구멍, 오른쪽 통풍구.',c:'#e6e9e8'},
+  magnet:{n:'투명 뚜껑 · 자석',d:'투명 아크릴 뚜껑. 모서리 기둥과 뚜껑에 Ø8×3mm 네오디뮴 자석 4쌍(극 반대로).',c:'#c9cfd3'},
+  phone:{n:'S20 FE 보드',d:'화면 · 뒷판 제거, 보드 + 배터리만. USB-C 서브보드 연결 방식은 분해 후 확인.',c:'#2b3236'},
+  hub:{n:'USB-C 허브',d:'디지털케미 DCH-H301 (분해, 기판만). HDMI · USB-A ×3 · PD 입력.',c:'#b9c0c4'},
+  ports:{n:'뒷면 포트',d:'HDMI · USB-A ×3. 분해한 허브 기판 포트를 뒷벽 구멍으로 바로 노출.',c:'#1d2124'},
+  buck:{n:'PD 충전 모듈',d:'XPM52C 기반 PD 65W 모듈. 12V 입력 → USB-C PD.',c:'#2f6fd6'},
+  jack:{n:'DC 잭 + 퓨즈 + 스위치',d:'Tensility 54-00311 + 5A 퓨즈 + 16mm 래칭 푸시버튼(링 LED). 뒷벽 왼쪽.',c:'#1f2326'},
+  fan:{n:'쿨링 팬',d:'DC 12V 40×40×10 팬 (0.08A). 왼쪽 벽, 전원 버튼 뒤 12V 라인. 1개 또는 2개.',c:'#3a4248'},
+};
+let renderer,scene,camera,controls,stageEl,pickables=[],groups={},selected=null,lidOpen=false,exploded=false,spin=false;
+const tgt={lid:0,exp:0}, cur={lid:0,exp:0};
+
+window.resizeThree=()=>{ if(!renderer) return; const w=stageEl.clientWidth,h=stageEl.clientHeight; renderer.setSize(w,h,false); camera.aspect=w/h; camera.updateProjectionMatrix(); };
+
+window.startThree=()=>{
+  stageEl=document.getElementById('stage');
+  renderer=new THREE.WebGLRenderer({antialias:true,alpha:true});
+  renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+  renderer.shadowMap.enabled=true; renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+  stageEl.prepend(renderer.domElement);
+  scene=new THREE.Scene();
+  camera=new THREE.PerspectiveCamera(38,1,1,3000);
+  controls=new OrbitControls(camera,renderer.domElement);
+  controls.enableDamping=true; controls.maxPolarAngle=Math.PI*0.49; controls.minDistance=90; controls.maxDistance=600;
+  resetView();
+
+  scene.add(new THREE.HemisphereLight(0xffffff,0x8a9490,1.1));
+  const sun=new THREE.DirectionalLight(0xffffff,1.6); sun.position.set(-160,320,220); sun.castShadow=true;
+  sun.shadow.mapSize.set(2048,2048); Object.assign(sun.shadow.camera,{left:-220,right:220,top:220,bottom:-220,near:10,far:900});
+  scene.add(sun);
+  const fill=new THREE.DirectionalLight(0xffffff,.5); fill.position.set(220,120,-160); scene.add(fill);
+
+  const ground=new THREE.Mesh(new THREE.PlaneGeometry(1600,1600),new THREE.ShadowMaterial({opacity:.18}));
+  ground.rotation.x=-Math.PI/2; ground.receiveShadow=true; scene.add(ground);
+
+  build();
+  buildPartList();
+  window.resizeThree(); addEventListener('resize',window.resizeThree);
+  const ray=new THREE.Raycaster(), mp=new THREE.Vector2();
+  let down=null;
+  renderer.domElement.addEventListener('pointerdown',e=>down=[e.clientX,e.clientY]);
+  renderer.domElement.addEventListener('pointerup',e=>{
+    if(!down||Math.hypot(e.clientX-down[0],e.clientY-down[1])>5) return;
+    const r=renderer.domElement.getBoundingClientRect();
+    mp.set((e.clientX-r.left)/r.width*2-1,-(e.clientY-r.top)/r.height*2+1);
+    ray.setFromCamera(mp,camera);
+    const hit=ray.intersectObjects(pickables,false)[0];
+    select(hit?hit.object.userData.part:null);
+  });
+  renderer.domElement.addEventListener('pointermove',e=>{
+    const r=renderer.domElement.getBoundingClientRect();
+    mp.set((e.clientX-r.left)/r.width*2-1,-(e.clientY-r.top)/r.height*2+1);
+    ray.setFromCamera(mp,camera);
+    renderer.domElement.style.cursor=ray.intersectObjects(pickables,false).length?'pointer':'grab';
+  });
+  document.getElementById('bLid').onclick=e=>{lidOpen=!lidOpen; tgt.lid=lidOpen?1:0; e.currentTarget.setAttribute('aria-pressed',!lidOpen);};
+  document.getElementById('bExp').onclick=e=>{exploded=!exploded; tgt.exp=exploded?1:0; e.currentTarget.setAttribute('aria-pressed',exploded);};
+  document.getElementById('bSpin').onclick=e=>{spin=!spin; controls.autoRotate=spin; controls.autoRotateSpeed=1.2; e.currentTarget.setAttribute('aria-pressed',spin);};
+  document.getElementById('bReset').onclick=resetView;
+  loop();
+};
+function resetView(){ camera.position.set(-150,190,-185); controls.target.set(0,14,0); controls.update(); }
+
+/* ---------- 재질 ---------- */
+const M={
+  case:new THREE.MeshStandardMaterial({color:0xe9ecea,roughness:.85}),
+  caseIn:new THREE.MeshStandardMaterial({color:0xdde2e0,roughness:.9}),
+  dark:new THREE.MeshStandardMaterial({color:0x1d2124,roughness:.6}),
+  phone:new THREE.MeshStandardMaterial({color:0x2b3236,roughness:.35,metalness:.4}),
+  glass:new THREE.MeshStandardMaterial({color:0x0b0d0f,roughness:.15,metalness:.6}),
+  frame:new THREE.MeshStandardMaterial({color:0x8e9599,roughness:.3,metalness:.8}),
+  alu:new THREE.MeshStandardMaterial({color:0xb9c0c4,roughness:.35,metalness:.85}),
+  pcb:new THREE.MeshStandardMaterial({color:0x2f6fd6,roughness:.6}),
+  pcbB:new THREE.MeshStandardMaterial({color:0x1b1f22,roughness:.6}),
+  sink:new THREE.MeshStandardMaterial({color:0xd7dadc,roughness:.3,metalness:.9}),
+  cap:new THREE.MeshStandardMaterial({color:0x2f8f4e,roughness:.4}),
+  red:new THREE.MeshStandardMaterial({color:0xd8322b,roughness:.5}),
+  blk:new THREE.MeshStandardMaterial({color:0x202326,roughness:.5}),
+  ylw:new THREE.MeshStandardMaterial({color:0xe7c21b,roughness:.5}),
+  usbc:new THREE.MeshStandardMaterial({color:0x2a2e31,roughness:.5}),
+  white:new THREE.MeshStandardMaterial({color:0xf3f4f4,roughness:.7}),
+  stand:new THREE.MeshStandardMaterial({color:0xcfd6d4,roughness:.8}),
+  hole:new THREE.MeshStandardMaterial({color:0x111416,roughness:1}),
+  mag:new THREE.MeshStandardMaterial({color:0xc9cfd3,roughness:.25,metalness:.95}),
+  board:new THREE.MeshStandardMaterial({color:0x1f4a5a,roughness:.55}),
+  batt:new THREE.MeshStandardMaterial({color:0x3a3f44,roughness:.5,metalness:.3}),
+  copper:new THREE.MeshStandardMaterial({color:0xc8894a,roughness:.4,metalness:.7}),
+};
+function box(w,h,d,mat,r=0){ const g=r?new RoundedBoxGeometry(w,h,d,3,r):new THREE.BoxGeometry(w,h,d); const m=new THREE.Mesh(g,mat); m.castShadow=m.receiveShadow=true; return m; }
+function cyl(r,h,mat,seg=24){ const m=new THREE.Mesh(new THREE.CylinderGeometry(r,r,h,seg),mat); m.castShadow=m.receiveShadow=true; return m; }
+function grp(key){ const g=new THREE.Group(); g.userData.part=key; groups[key]=g; scene.add(g); return g; }
+function tag(obj,key){ obj.traverse(o=>{ if(o.isMesh){o.userData.part=key; pickables.push(o);} }); }
+function wire(pts,mat,r=1.4){ const c=new THREE.CatmullRomCurve3(pts.map(p=>new THREE.Vector3(...p))); const m=new THREE.Mesh(new THREE.TubeGeometry(c,80,r,8,false),mat); m.castShadow=true; return m; }
+
+/* 케이스 크기 (mm) */
+const W=160,D=110,H=55,T=3;
+const BACK=-D/2;
+
+function build(){
+  /* 케이스 */
+  const cs=grp('case');
+  const floor=box(W,T,D,M.caseIn,1); floor.position.y=T/2; cs.add(floor);
+  const back=box(W,H,T,M.case); back.position.set(0,H/2,BACK+T/2); cs.add(back);
+  const front=box(W,H,T,M.case); front.position.set(0,H/2,D/2-T/2); cs.add(front);
+  const left=box(T,H,D,M.case); left.position.set(-W/2+T/2,H/2,0); cs.add(left);
+  const right=box(T,H,D,M.case); right.position.set(W/2-T/2,H/2,0); cs.add(right);
+  // 오른쪽 통풍구
+  for(let i=0;i<6;i++) for(let j=0;j<2;j++){ const sl=new THREE.Mesh(new RoundedBoxGeometry(1.2,4,12,2,1.5),M.hole); sl.position.set(W/2+0.2,20+j*12,-30+i*12); cs.add(sl); }
+  // 왼쪽 벽 팬 구멍
+  const ring=new THREE.Mesh(new THREE.TorusGeometry(18,1.2,8,40),M.hole); ring.rotation.y=Math.PI/2; ring.position.set(-W/2-0.3,H/2+2,0); cs.add(ring);
+  // 뒷벽 바깥 구멍: 전원 버튼(Ø16), DC 잭, HDMI, USB-A x3
+  const yP=T+16;
+  [[-56,0,0,8],[-34,0,0,5.6],[-6,15,6,0],[14,13,5.5,0],[30,13,5.5,0],[46,13,5.5,0]].forEach(([x,w,h,r])=>{
+    const m=r?cyl(r,1.4,M.hole):box(w,h,1.4,M.hole); if(r) m.rotation.x=Math.PI/2; m.position.set(x,r?T+24:(w===15&&h===21?T+24:yP),BACK-0.15); cs.add(m); });
+  // 모서리 기둥
+  [[-1,-1],[1,-1],[-1,1],[1,1]].forEach(([sx,sz])=>{ const p=cyl(5.5,H-T,M.white); p.position.set(sx*(W/2-7),(H-T)/2+T/2,sz*(D/2-7)); cs.add(p); });
+  tag(cs,'case');
+
+  /* 자석 (기둥 윗면) */
+  const mg=grp('magnet');
+  [[-1,-1],[1,-1],[-1,1],[1,1]].forEach(([sx,sz])=>{ const m=cyl(4,1.2,M.mag); m.position.set(sx*(W/2-7),H-0.4,sz*(D/2-7)); mg.add(m); });
+  tag(mg,'magnet');
+
+  /* 투명 뚜껑 + 뚜껑 쪽 자석 */
+  const lidMat=new THREE.MeshStandardMaterial({color:0xdff3f1,roughness:.08,metalness:0,transparent:true,opacity:.28,depthWrite:false});
+  const lid=new THREE.Mesh(new RoundedBoxGeometry(W,T,D,3,1.5),lidMat);
+  const lidG=new THREE.Group(); lidG.add(lid);
+  const edge=new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.BoxGeometry(W,T,D)),new THREE.LineBasicMaterial({color:0x6fb7ae,transparent:true,opacity:.9})); lidG.add(edge);
+  [[-1,-1],[1,-1],[-1,1],[1,1]].forEach(([sx,sz])=>{ const m=cyl(4,1.2,M.mag); m.position.set(sx*(W/2-7),-T/2-0.6,sz*(D/2-7)); lidG.add(m); });
+  scene.add(lidG); groups.lid=lidG;
+
+  /* S20 FE 보드 + 배터리 */
+  const ph=grp('phone');
+  const bat=box(66,5,60,M.batt,2); bat.position.y=2.5; ph.add(bat);
+  [[-30,-26],[30,-26],[-30,26],[30,26]].forEach(([x,z])=>{ const so=cyl(2,6,M.white); so.position.set(x,3,z); ph.add(so); });
+  const pcb=box(72,1.2,64,M.board,1); pcb.position.y=6.6; ph.add(pcb);
+  [[14,-14,26,20],[14,14,22,16],[-6,20,14,12]].forEach(([x,z,w,d])=>{ const sh=box(w,1.6,d,M.sink,0.6); sh.position.set(x,8,z); ph.add(sh); });
+  const camH=box(16,5,40,M.dark,3); camH.position.set(-22,9.6,-6); ph.add(camH);
+  [-20,-6,8].forEach(z=>{ const l=cyl(5,2,M.glass); l.position.set(-22,12.6,z); ph.add(l); const r=new THREE.Mesh(new THREE.TorusGeometry(5.4,.6,6,24),M.frame); r.rotation.x=Math.PI/2; r.position.set(-22,13.4,z); ph.add(r); });
+  // USB-C 서브보드 (앞쪽)
+  const sub=box(24,1.2,12,M.board,.6); sub.position.set(18,6.6,40); ph.add(sub);
+  const flex=box(4,0.4,10,M.copper); flex.position.set(18,6.6,32); ph.add(flex);
+  const uc=box(9,3.2,7,M.frame,1.2); uc.position.set(26,8.6,40); ph.add(uc);
+  ph.userData.base=new THREE.Vector3(-26,T+0.5,6);
+  tag(ph,'phone');
+
+  /* USB-C 허브 (포트가 뒤쪽) */
+  const hb=grp('hub');
+  hb.add(box(56,12,26,M.alu,4));
+  [[-18,14,6],[-2,12,5.5],[12,12,5.5],[24,8.5,3.2]].forEach(([x,w,h])=>{ const p=box(w,h,1,M.hole); p.position.set(x,0,-13.1); hb.add(p); });
+  const pdIn=box(9,3.2,1,M.hole); pdIn.position.set(14,0,13.1); hb.add(pdIn);
+  hb.userData.base=new THREE.Vector3(44,T+6,-14);
+  tag(hb,'hub');
+
+  /* 뒷면 패널 커넥터 (연장선 암단자) */
+  const pt=grp('ports');
+  [[-6,18,9,'h'],[14,16,8,'a'],[30,16,8,'a'],[46,12,6,'c']].forEach(([x,w,h])=>{ const b=box(w,h,10,M.dark,1); b.position.set(x,0,5); pt.add(b); const f=box(w+4,h+3,1.2,M.dark,.5); f.position.set(x,0,0.6); pt.add(f); });
+  pt.userData.base=new THREE.Vector3(0,T+16,BACK+T);
+  tag(pt,'ports');
+
+  /* PD 모듈 */
+  const bk=grp('buck');
+  bk.add(box(44,1.6,22,M.pcb,0.5));
+  const sink=new THREE.Group();
+  for(let i=0;i<6;i++){ const f=box(1,6,12,M.sink); f.position.set(-3+i*2.2,3.8,0); sink.add(f);} const sb=box(14,1.2,12,M.sink); sb.position.y=1.4; sink.add(sb);
+  sink.position.x=4; bk.add(sink);
+  const cap=cyl(3.5,9,M.cap); cap.position.set(-14,5.3,5); bk.add(cap);
+  const coil=new THREE.Mesh(new THREE.TorusGeometry(3.2,1.5,8,20),M.copper); coil.rotation.x=Math.PI/2; coil.position.set(-12,2.4,-5); bk.add(coil);
+  const ucOut=box(1,3.2,9,M.frame); ucOut.position.set(22,2.4,0); bk.add(ucOut);
+  bk.userData.base=new THREE.Vector3(40,T+1,30);
+  tag(bk,'buck');
+
+  /* DC 잭 + 전원 버튼 (뒷벽 왼쪽 안쪽) */
+  const jk=grp('jack');
+  const sw=cyl(8,30,M.dark); sw.rotation.x=Math.PI/2; sw.position.set(0,0,15); jk.add(sw);
+  const swRing=new THREE.Mesh(new THREE.TorusGeometry(6,0.8,8,32),M.red); swRing.position.set(0,0,-0.9); jk.add(swRing);
+  [-3,3].forEach(x=>{const l=box(2.4,4,6,M.red,.6); l.position.set(x,-2,33); jk.add(l);});
+  const dc=cyl(6,12,M.blk); dc.rotation.x=Math.PI/2; dc.position.set(22,0,6); jk.add(dc);
+  const fuse=box(10,6,22,M.ylw,1.5); fuse.position.set(10,-14,20); jk.add(fuse);
+  jk.userData.base=new THREE.Vector3(-56,T+24,BACK+T);
+  tag(jk,'jack');
+
+  /* 팬 (왼쪽 벽) */
+  const fn=grp('fan');
+  fn.add(box(10,40,40,M.dark,3));
+  const hubC=cyl(7,10.4,M.pcbB); hubC.rotation.z=Math.PI/2; fn.add(hubC);
+  const blades=new THREE.Group();
+  for(let i=0;i<7;i++){ const b=box(1.4,15,6,M.blk,0.6); b.position.y=10; const p=new THREE.Group(); b.rotation.x=.4; p.add(b); p.rotation.x=i*Math.PI*2/7; blades.add(p);}
+  fn.add(blades); fn.userData.blades=blades;
+  fn.userData.base=new THREE.Vector3(-W/2+T+5.5,H/2+2,0);
+  tag(fn,'fan');
+
+  placeAll(0);
+  buildWires();
+}
+
+/* 배선 */
+let wireGroup=new THREE.Group();
+function wp(key,local){ const g=groups[key]; g.updateMatrixWorld(); return g.localToWorld(new THREE.Vector3(...local)).toArray(); }
+function buildWires(){
+  scene.remove(wireGroup); wireGroup.traverse(o=>o.geometry&&o.geometry.dispose());
+  wireGroup=new THREE.Group(); scene.add(wireGroup);
+  const fl=T+2;
+  // DC 잭 + → 퓨즈 → 전원 버튼
+  const dcp=wp('jack',[22,-2,12]), fz=wp('jack',[10,-14,9]), s1=wp('jack',[-3,-2,36]);
+  wireGroup.add(wire([dcp,[dcp[0],dcp[1]-6,dcp[2]+4],fz],M.red,1.2));
+  wireGroup.add(wire([wp('jack',[10,-14,31]),[s1[0]+4,fl+3,s1[2]+16],[s1[0],s1[1]-2,s1[2]+6],s1],M.red,1.2));
+  // 전원 버튼 → PD 모듈 입력(+), DC 잭 GND → PD 모듈 입력(-)
+  const s2=wp('jack',[3,-2,36]), bi=wp('buck',[-22,1,-4]), bi2=wp('buck',[-22,1,4]);
+  wireGroup.add(wire([s2,[s2[0]+2,fl+3,s2[2]+24],[bi[0]-30,fl+3,bi[2]-6],bi],M.red,1.2));
+  const g1=wp('jack',[24,-5,12]);
+  wireGroup.add(wire([g1,[g1[0]+6,fl+2,g1[2]+20],[bi2[0]-28,fl+2,bi2[2]+4],bi2],M.blk,1.2));
+  // 팬 12V (전원 버튼 뒤)
+  const fp=wp('fan',[5,-16,-8]);
+  wireGroup.add(wire([[s2[0]+1,s2[1]-1,s2[2]],[s2[0]-8,fl+4,s2[2]+12],[fp[0]+10,fl+3,fp[2]-6],fp],M.red,1));
+  wireGroup.add(wire([[g1[0]-1,g1[1],g1[2]],[g1[0]-20,fl+1.5,g1[2]+18],[fp[0]+12,fl+1.5,fp[2]-2],[fp[0],fp[1],fp[2]+3]],M.blk,1));
+  // PD 모듈 출력 → 허브 PD 입력
+  const bo=wp('buck',[22,2.4,0]), pd=wp('hub',[14,0,13.5]);
+  wireGroup.add(wire([bo,[bo[0]+8,bo[1]+2,bo[2]],[pd[0]+4,pd[1],pd[2]+10],pd],M.usbc,1.8));
+  // 허브 → 폰 USB-C
+  const hl=wp('hub',[-28,0,6]), pp=wp('phone',[30.5,8.6,40]);
+  wireGroup.add(wire([hl,[hl[0]-8,hl[1]+4,hl[2]+8],[pp[0]+8,pp[1]+6,pp[2]-10],[pp[0]+4,pp[1],pp[2]],pp],M.usbc,1.8));
+  // 허브 포트 → 뒷면 패널 커넥터
+  [[-18,-6,1.9],[-2,14,1.6],[12,30,1.6],[24,46,1.4]].forEach(([hx,px,r])=>{
+    const a=wp('hub',[hx,0,-13.5]), b=wp('ports',[px,0,10]);
+    wireGroup.add(wire([a,[a[0],a[1]+3,a[2]-6],[b[0],b[1]+3,b[2]+6],b],M.blk,r)); });
+  wireGroup.traverse(o=>{ if(o.isMesh){o.userData.part=null;} });
+}
+
+function placeAll(e){
+  const up={phone:70,hub:45,ports:20,buck:35,jack:22,fan:25};
+  const side={fan:-45};
+  const back={ports:-25,jack:-25};
+  for(const k in up){ const g=groups[k]; if(!g||!g.userData.base) continue;
+    g.position.copy(g.userData.base); g.position.y+=up[k]*e; if(side[k]) g.position.x+=side[k]*e; if(back[k]) g.position.z+=back[k]*e; }
+}
+
+function buildPartList(){
+  const el=document.getElementById('parts');
+  el.innerHTML=Object.entries(PARTS).map(([k,p])=>`<button class="part" data-k="${k}"><i class="sw" style="background:${p.c}"></i><div><b>${p.n}</b><span>${p.d}</span></div></button>`).join('');
+  el.addEventListener('click',e=>{ const b=e.target.closest('.part'); if(b){ select(b.dataset.k); document.getElementById('stage').scrollIntoView({behavior:'smooth',block:'center'});} });
+}
+
+const emissive=new Map();
+function select(k){
+  // 이전 하이라이트 해제
+  pickables.forEach(m=>{ if(emissive.has(m)){ m.material=emissive.get(m); } });
+  emissive.clear(); selected=k;
+  document.querySelectorAll('.part').forEach(b=>b.classList.toggle('on',b.dataset.k===k));
+  const info=document.getElementById('info');
+  if(!k){ info.innerHTML='<b>S20 FE 미니PC</b><span>부품을 누르면 설명이 나와요</span>'; return; }
+  info.innerHTML=`<b>${PARTS[k].n}</b><span>${PARTS[k].d}</span>`;
+  pickables.forEach(m=>{ if(m.userData.part===k){ emissive.set(m,m.material); const c=m.material.clone(); c.emissive=new THREE.Color(0x14b8a6); c.emissiveIntensity=.35; m.material=c; } });
+}
+
+let last=performance.now();
+function loop(){
+  requestAnimationFrame(loop);
+  const now=performance.now(), dt=Math.min((now-last)/1000,.05); last=now;
+  let moved=false;
+  for(const k of ['lid','exp']){ const d=tgt[k]-cur[k]; if(Math.abs(d)>.001){ cur[k]+=d*Math.min(1,dt*6); moved=true; } else cur[k]=tgt[k]; }
+  // 뚜껑: 0=닫힘, 1=열림(위로 들어 뒤로 젖힘)
+  const L=groups.lid; const o=cur.lid;
+  L.position.set(0,H+T/2+0.6+o*70,0); L.children[0].material.opacity=.28*(1-o); L.children.forEach((c,i)=>{ if(i) c.visible=o<.6; }); L.children[1].material.opacity=.9*(1-o); L.visible=o<.97;
+  if(moved){ placeAll(cur.exp); buildWires(); }
+  if(groups.fan) groups.fan.userData.blades.rotation.x+=dt*18;
+  controls.update(); renderer.render(scene,camera);
+}
+</script>
+</body></html>
